@@ -56,6 +56,12 @@ AI Credit Stress Index = sum(metric_score * weight) / sum(weight)
 - 图表获得键盘焦点后，可以用左右方向键逐点查看，`Home`/`End` 跳到首尾数据点。
 - 单一历史观测的财务指标仍显示坐标轴和数据点；需要连续趋势时，应在后续季度保留历史缓存。
 
+## 在线访问
+
+公开仪表盘：<https://jerryfanfanfanfan.github.io/ai-credit-risk-dashboard/>
+
+`.github/workflows/pages.yml` 会在 `dashboard/` 目录或部署工作流变化时自动重新发布 GitHub Pages。每周数据更新提交包含 `dashboard/data/metrics.json`，因此也会触发页面重发。
+
 ## 安装与运行
 
 在项目目录运行：
@@ -137,7 +143,7 @@ data/cache/latest_metrics.json   最近一次生成的数据缓存
 dashboard/                       本地仪表盘页面
 dashboard/data/metrics.json      页面读取的数据文件
 scripts/update_data.py           数据抓取、计算、指数生成脚本
-.github/workflows/               每周公开数据自动更新
+.github/workflows/               每周数据更新与 GitHub Pages 部署
 ```
 
 ## 注意
