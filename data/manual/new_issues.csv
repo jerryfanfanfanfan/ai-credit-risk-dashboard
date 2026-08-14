@@ -1,0 +1,11 @@
+date,issuer,amount_usd_bn,orderbook_cover,new_issue_concession_bp,source,quality,notes
+2025-02-12,AMZN,8,3.4,6,sample,illustrative,Replace with DCM/IFR/Bloomberg deal data
+2025-03-18,META,12,3.1,7,sample,illustrative,Replace with DCM/IFR/Bloomberg deal data
+2025-05-09,ORCL,10,2.6,12,sample,illustrative,Replace with DCM/IFR/Bloomberg deal data
+2025-07-22,MSFT,9,2.9,8,sample,illustrative,Replace with DCM/IFR/Bloomberg deal data
+2025-10-15,ORCL,16,2.1,18,sample,illustrative,Replace with DCM/IFR/Bloomberg deal data
+2026-01-28,META,18,2.0,20,sample,illustrative,Replace with DCM/IFR/Bloomberg deal data
+2026-03-11,GOOGL,11,2.3,16,sample,illustrative,Replace with DCM/IFR/Bloomberg deal data
+2026-05-19,ORCL,24,1.8,27,sample,illustrative,Replace with DCM/IFR/Bloomberg deal data
+2026-07-10,AMZN,20,1.6,30,sample,illustrative,Replace with DCM/IFR/Bloomberg deal data
+2026-08-07,ORCL,14,1.7,28,sample,illustrative,Replace with DCM/IFR/Bloomberg deal data

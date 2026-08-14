@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>AI信用风险仪表盘</title>
+    <link rel="stylesheet" href="./styles.css?v=4" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">US AI Credit Monitor</p>
+        <h1>AI信用风险仪表盘</h1>
+      </div>
+      <div class="top-actions">
+        <button id="refreshButton" type="button" title="重新读取本地数据">刷新</button>
+      </div>
+    </header>
+
+    <main>
+      <section class="summary-strip">
+        <div class="summary-index">
+          <span class="summary-label">AI Credit Stress Index</span>
+          <div class="index-row">
+            <span id="indexValue">--</span>
+            <span id="indexStatus" class="status-chip">--</span>
+          </div>
+        </div>
+        <div class="summary-copy">
+          <p id="asOfText">等待数据...</p>
+          <div class="legend">
+            <span><i class="green"></i> 0-34 正常</span>
+            <span><i class="yellow"></i> 35-64 关注</span>
+            <span><i class="red"></i> 65-100 压力</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="controls">
+        <div class="segmented" id="categoryFilters" aria-label="指标类别筛选"></div>
+        <label class="search">
+          <span>搜索</span>
+          <input id="searchInput" type="search" placeholder="Oracle, OAS, capex..." />
+        </label>
+      </section>
+
+      <section class="grid-section">
+        <div class="section-title">
+          <h2>核心指标</h2>
+          <p>共 16 个指标；每张卡片展示原始历史序列、压力分位与数据口径。</p>
+        </div>
+        <div id="metricGrid" class="metric-grid"></div>
+      </section>
+
+      <section class="table-section">
+        <div class="section-title">
+          <h2>数据源与替代方案</h2>
+          <p>优先公开稳定数据；无法稳定公开抓取的项目保留手工 CSV 和付费源接口。</p>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>指标</th>
+                <th>更新频率</th>
+                <th>首选数据源</th>
+                <th>缺失时 proxy</th>
+              </tr>
+            </thead>
+            <tbody id="sourceTable"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="warningBand" class="warning-band" hidden>
+        <h2>数据提示</h2>
+        <ul id="warningList"></ul>
+      </section>
+    </main>
+
+    <script src="./app.js?v=3"></script>
+  </body>
+</html>
