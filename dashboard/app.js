@@ -5,6 +5,8 @@ const state = {
   chartModels: new Map(),
 };
 
+const compactChartQuery = window.matchMedia("(max-width: 520px)");
+
 const statusLabel = {
   green: "正常",
   yellow: "关注",
@@ -82,9 +84,12 @@ function chartGeometry(metric) {
   const rows = state.data.series[metric.id] || [];
   if (!rows.length) return null;
 
-  const width = 560;
-  const height = 210;
-  const pad = { left: 54, right: 18, top: 18, bottom: 38 };
+  const compact = compactChartQuery.matches;
+  const width = compact ? 360 : 560;
+  const height = compact ? 240 : 210;
+  const pad = compact
+    ? { left: 46, right: 12, top: 20, bottom: 44 }
+    : { left: 54, right: 18, top: 18, bottom: 38 };
   const values = rows.map(row => Number(row.value));
   const times = rows.map(row => Date.parse(`${row.date}T00:00:00Z`));
   let minValue = Math.min(...values);
@@ -125,7 +130,7 @@ function detailedChart(metric) {
 
   return `
     <div class="metric-chart" data-metric-id="${escapeHtml(metric.id)}">
-      <svg class="detail-chart" viewBox="0 0 ${width} ${height}" role="img" tabindex="0" aria-label="${escapeHtml(metric.name)}历史走势">
+      <svg class="detail-chart" viewBox="0 0 ${width} ${height}" style="aspect-ratio: ${width} / ${height}" role="img" tabindex="0" aria-label="${escapeHtml(metric.name)}历史走势">
         <text class="axis-unit" x="${pad.left}" y="11">${escapeHtml(unitLabel)}</text>
         ${yTicks.map(value => {
           const y = pad.top + (model.yTicks[model.yTicks.length - 1] - value) * (height - pad.top - pad.bottom) / (model.yTicks[model.yTicks.length - 1] - model.yTicks[0]);
@@ -146,7 +151,7 @@ function detailedChart(metric) {
         </g>
         <rect class="chart-interaction" x="${pad.left}" y="${pad.top}" width="${width - pad.left - pad.right}" height="${height - pad.top - pad.bottom}"></rect>
       </svg>
-      <div class="chart-tooltip" role="tooltip" aria-hidden="true"></div>
+      <div class="chart-tooltip" role="tooltip" aria-live="polite" aria-hidden="true"></div>
     </div>
   `;
 }
@@ -198,7 +203,7 @@ function renderCards() {
     return `
       <article class="metric-card ${escapeHtml(metric.status)}">
         <div class="metric-head">
-          <div class="metric-title" tabindex="0" aria-label="${escapeHtml(metric.name)}：${escapeHtml(meaning)} ${escapeHtml(implication)}">
+          <button class="metric-title" type="button" aria-expanded="false" aria-label="${escapeHtml(metric.name)}：${escapeHtml(meaning)} ${escapeHtml(implication)}">
             <span class="metric-name">${escapeHtml(metric.name)}</span>
             <span class="info-mark" aria-hidden="true">i</span>
             <div class="metric-explainer" role="tooltip">
@@ -207,7 +212,7 @@ function renderCards() {
               <strong>风险暗示</strong>
               <p>${escapeHtml(implication)}</p>
             </div>
-          </div>
+          </button>
           <span class="metric-status">${statusLabel[metric.status]}</span>
         </div>
         <div class="metric-value-row">
@@ -232,7 +237,33 @@ function renderCards() {
       </article>
     `;
   }).join("");
+  bindMetricExplainers();
   bindChartInteractions();
+}
+
+function closeMetricExplainers(except = null) {
+  document.querySelectorAll(".metric-title.is-open").forEach(button => {
+    if (button === except) return;
+    button.classList.remove("is-open");
+    button.setAttribute("aria-expanded", "false");
+  });
+}
+
+function bindMetricExplainers() {
+  document.querySelectorAll(".metric-title").forEach(button => {
+    button.addEventListener("click", () => {
+      const shouldOpen = !button.classList.contains("is-open");
+      closeMetricExplainers(button);
+      button.classList.toggle("is-open", shouldOpen);
+      button.setAttribute("aria-expanded", String(shouldOpen));
+    });
+    button.addEventListener("keydown", event => {
+      if (event.key !== "Escape") return;
+      button.classList.remove("is-open");
+      button.setAttribute("aria-expanded", "false");
+      button.blur();
+    });
+  });
 }
 
 function nearestPoint(points, x) {
@@ -273,7 +304,9 @@ function showChartPoint(svg, metric, point) {
   const renderedHeight = svg.clientHeight;
   const left = point.x / model.width * renderedWidth;
   const top = point.y / model.height * renderedHeight;
-  tooltip.style.left = `${Math.max(98, Math.min(wrapper.clientWidth - 98, left))}px`;
+  const halfTooltip = tooltip.offsetWidth / 2;
+  const safeLeft = Math.max(halfTooltip + 4, Math.min(wrapper.clientWidth - halfTooltip - 4, left));
+  tooltip.style.left = `${safeLeft}px`;
   tooltip.style.top = `${top}px`;
   tooltip.classList.toggle("below", top < 72);
 }
@@ -294,19 +327,32 @@ function bindChartInteractions() {
     const svg = wrapper.querySelector("svg");
     if (!metric || !model || !svg) return;
 
-    svg.addEventListener("pointermove", event => {
+    const pointFromEvent = event => {
       const rect = svg.getBoundingClientRect();
       const svgX = (event.clientX - rect.left) * model.width / rect.width;
-      showChartPoint(svg, metric, nearestPoint(model.points, svgX));
+      return nearestPoint(model.points, svgX);
+    };
+
+    svg.addEventListener("pointerdown", event => {
+      if (event.pointerType !== "touch" && event.pointerType !== "pen") return;
+      svg.dataset.pinned = "true";
+      showChartPoint(svg, metric, pointFromEvent(event));
+    });
+    svg.addEventListener("pointermove", event => {
+      if (event.pointerType === "touch") return;
+      delete svg.dataset.pinned;
+      showChartPoint(svg, metric, pointFromEvent(event));
     });
     svg.addEventListener("pointerleave", () => {
-      if (document.activeElement !== svg) hideChartPoint(svg);
+      if (document.activeElement !== svg && svg.dataset.pinned !== "true") hideChartPoint(svg);
     });
     svg.addEventListener("focus", () => {
       const index = Number(svg.dataset.activeIndex ?? model.points.length - 1);
       showChartPoint(svg, metric, model.points[index]);
     });
-    svg.addEventListener("blur", () => hideChartPoint(svg));
+    svg.addEventListener("blur", () => {
+      if (svg.dataset.pinned !== "true") hideChartPoint(svg);
+    });
     svg.addEventListener("keydown", event => {
       if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
       event.preventDefault();
@@ -343,6 +389,19 @@ document.getElementById("refreshButton").addEventListener("click", loadData);
 document.getElementById("searchInput").addEventListener("input", event => {
   state.query = event.target.value;
   renderCards();
+});
+
+document.addEventListener("pointerdown", event => {
+  if (!event.target.closest(".metric-title")) closeMetricExplainers();
+  document.querySelectorAll('.detail-chart[data-pinned="true"]').forEach(svg => {
+    if (svg.contains(event.target)) return;
+    delete svg.dataset.pinned;
+    hideChartPoint(svg);
+  });
+});
+
+compactChartQuery.addEventListener("change", () => {
+  if (state.data) renderCards();
 });
 
 loadData().catch(error => {

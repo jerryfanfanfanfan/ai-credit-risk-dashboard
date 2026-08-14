@@ -281,6 +281,12 @@ main {
   display: inline-flex;
   align-items: center;
   gap: 7px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
   cursor: help;
   outline: none;
 }
@@ -338,7 +344,8 @@ main {
 }
 
 .metric-title:hover .metric-explainer,
-.metric-title:focus-visible .metric-explainer {
+.metric-title:focus-visible .metric-explainer,
+.metric-title.is-open .metric-explainer {
   opacity: 1;
   visibility: visible;
   transform: translateY(0);
@@ -376,6 +383,7 @@ main {
 .metric-value-row {
   min-height: 44px;
   display: flex;
+  flex-wrap: wrap;
   align-items: flex-end;
   justify-content: space-between;
   gap: 12px;
@@ -443,10 +451,10 @@ main {
 
 .detail-chart {
   width: 100%;
-  aspect-ratio: 560 / 210;
   display: block;
   overflow: visible;
   outline: none;
+  touch-action: pan-y;
 }
 
 .detail-chart:focus-visible {
@@ -575,6 +583,7 @@ main {
 
 table {
   width: 100%;
+  min-width: 720px;
   border-collapse: collapse;
   font-size: 13px;
 }
@@ -637,9 +646,54 @@ th {
 }
 
 @media (max-width: 520px) {
+  .topbar {
+    min-height: auto;
+    padding: 16px 14px;
+    gap: 14px;
+  }
+
+  .top-actions,
+  .top-actions button,
+  .search {
+    width: 100%;
+  }
+
+  .top-actions button {
+    min-height: 42px;
+  }
+
   main {
     padding-right: 10px;
     padding-left: 10px;
+    padding-top: 14px;
+  }
+
+  .summary-strip {
+    min-height: 0;
+    padding: 16px;
+  }
+
+  .legend {
+    gap: 8px 12px;
+  }
+
+  .controls {
+    gap: 14px;
+    padding: 16px 0;
+  }
+
+  .segmented {
+    gap: 6px;
+  }
+
+  .segmented button {
+    min-height: 40px;
+  }
+
+  .search input {
+    min-width: 0;
+    width: auto;
+    flex: 1;
   }
 
   .grid-section,
@@ -649,7 +703,25 @@ th {
   }
 
   .metric-card {
+    min-height: 0;
+    gap: 12px;
     padding: 14px;
+  }
+
+  .metric-head {
+    gap: 8px;
+  }
+
+  .metric-name {
+    font-size: 14px;
+  }
+
+  .metric-value strong {
+    font-size: 30px;
+  }
+
+  .metric-explainer {
+    width: min(310px, calc(100vw - 52px));
   }
 
   .summary-index {
@@ -658,11 +730,27 @@ th {
     gap: 8px;
   }
 
-  .stat-grid {
-    grid-template-columns: 1fr;
+  .axis-label,
+  .axis-unit {
+    font-size: 11px;
+  }
+
+  .chart-tooltip {
+    width: min(184px, calc(100% - 16px));
+  }
+
+  .metric-meta {
+    font-size: 11px;
+    line-height: 1.5;
   }
 
   .chart-empty {
     min-height: 156px;
+  }
+}
+
+@media (max-width: 340px) {
+  .stat-grid {
+    grid-template-columns: 1fr;
   }
 }
