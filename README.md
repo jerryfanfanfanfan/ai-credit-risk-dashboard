@@ -116,7 +116,7 @@ python3 -m http.server 8000 -d dashboard
 - 更新 `dashboard/data/metrics.json` 与 `data/cache/latest_metrics.json`；
 - 仅在数据文件变化时由 `github-actions[bot]` 提交到默认分支。
 
-自动任务使用 `--strict-public` 模式。FRED 或 SEC 抓取失败时不会用样例回退覆盖仓库中的有效缓存，任务会保留旧数据并标记失败。CDS、发行簿、commitments、private credit 和 neocloud 等手工 CSV 不会被自动改写。
+自动任务使用 `--strict-public` 模式。FRED 或 SEC 暂时不可用时，任务会保留该来源最近一次成功的公开缓存，同时继续更新其他可用来源；只有关键来源不可用且没有有效缓存时才会失败。CDS、发行簿、commitments、private credit 和 neocloud 等手工 CSV 不会被自动改写。
 
 也可以在 GitHub 的 **Actions → Weekly data refresh → Run workflow** 手工触发一次。
 

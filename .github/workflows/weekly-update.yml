@@ -18,7 +18,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
-      SEC_USER_AGENT: ai-credit-risk-dashboard/${{ github.repository }} github-actions@users.noreply.github.com
+      SEC_USER_AGENT: jerryfanfanfanfan ai-credit-risk-dashboard jerryfanfanfanfan@users.noreply.github.com
 
     steps:
       - name: Check out repository

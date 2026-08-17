@@ -18,8 +18,9 @@ import math
 import os
 import statistics
 import sys
+import time
 from collections import defaultdict
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 from urllib.error import HTTPError, URLError
@@ -37,6 +38,8 @@ USER_AGENT = os.environ.get(
     "SEC_USER_AGENT",
     "ai-credit-risk-dashboard/0.1 contact: local-user@example.com",
 )
+
+RETRYABLE_HTTP_CODES = {403, 408, 429, 500, 502, 503, 504}
 
 FRED_SERIES = {
     "ig_oas": "BAMLC0A0CM",
@@ -82,10 +85,24 @@ def read_csv(path: Path) -> list[dict[str, str]]:
         return list(csv.DictReader(handle))
 
 
-def request_text(url: str, timeout: int = 20) -> str:
-    req = Request(url, headers={"User-Agent": USER_AGENT})
-    with urlopen(req, timeout=timeout) as response:
-        return response.read().decode("utf-8")
+def request_text(url: str, timeout: int = 20, attempts: int = 3) -> str:
+    headers = {
+        "User-Agent": USER_AGENT,
+        "Accept": "application/json,text/csv,text/plain;q=0.9,*/*;q=0.8",
+    }
+    for attempt in range(attempts):
+        req = Request(url, headers=headers)
+        try:
+            with urlopen(req, timeout=timeout) as response:
+                return response.read().decode("utf-8")
+        except HTTPError as exc:
+            if exc.code not in RETRYABLE_HTTP_CODES or attempt == attempts - 1:
+                raise
+        except (URLError, TimeoutError, OSError):
+            if attempt == attempts - 1:
+                raise
+        time.sleep(2**attempt)
+    raise RuntimeError(f"Request failed after {attempts} attempts: {url}")
 
 
 def fetch_fred_series(series_id: str, start: str = "2018-01-01") -> list[dict[str, Any]]:
@@ -104,19 +121,51 @@ def fetch_fred_series(series_id: str, start: str = "2018-01-01") -> list[dict[st
     return out
 
 
-def fred_data() -> tuple[dict[str, list[dict[str, Any]]], list[str]]:
+def cached_series(
+    cached_payload: dict[str, Any] | None,
+    metric_id: str,
+    source: str,
+) -> list[dict[str, Any]]:
+    if not cached_payload:
+        return []
+    source_rows = cached_payload.get("source_cache", {}).get("fred", {}).get(metric_id)
+    if source_rows is None:
+        source_rows = cached_payload.get("series", {}).get(metric_id, [])
+    return [
+        {
+            "date": row["date"],
+            "value": float(row["value"]),
+            "source": source,
+            "quality": "cached/public",
+        }
+        for row in source_rows
+        if row.get("date") and row.get("value") is not None
+    ]
+
+
+def fred_data(
+    cached_payload: dict[str, Any] | None = None,
+) -> tuple[dict[str, list[dict[str, Any]]], list[str], list[str]]:
     data: dict[str, list[dict[str, Any]]] = {}
-    warnings = []
+    warnings: list[str] = []
+    blocking_warnings: list[str] = []
     for name, series_id in FRED_SERIES.items():
         try:
             data[name] = fetch_fred_series(series_id)
         except (HTTPError, URLError, TimeoutError, OSError) as exc:
-            warnings.append(f"FRED {series_id} unavailable, using sample fallback: {exc}")
-            data[name] = [
-                {"date": d, "value": v, "source": "sample", "quality": "illustrative"}
-                for d, v in SAMPLE_FRED[name]
-            ]
-    return data, warnings
+            cached = cached_series(cached_payload, name, "FRED cache")
+            if cached:
+                warnings.append(f"FRED {series_id} unavailable, retaining cached public data: {exc}")
+                data[name] = cached
+            else:
+                message = f"FRED {series_id} unavailable and no public cache exists: {exc}"
+                warnings.append(f"{message}; using sample fallback")
+                blocking_warnings.append(message)
+                data[name] = [
+                    {"date": d, "value": v, "source": "sample", "quality": "illustrative"}
+                    for d, v in SAMPLE_FRED[name]
+                ]
+    return data, warnings, blocking_warnings
 
 
 def fetch_sec_companyfacts(cik: str) -> dict[str, Any]:
@@ -165,10 +214,17 @@ def first_value(values: dict[str, float], tags: list[str], default: float = math
     return default
 
 
-def sec_fundamentals(config: dict[str, Any]) -> tuple[dict[str, dict[str, float]], list[str]]:
-    warnings = []
+def sec_fundamentals(
+    config: dict[str, Any],
+    cached_fundamentals: dict[str, dict[str, float]] | None = None,
+) -> tuple[dict[str, dict[str, float]], list[str], list[str], str]:
+    warnings: list[str] = []
+    blocking_warnings: list[str] = []
     output: dict[str, dict[str, float]] = {}
-    for ticker, meta in config["tickers"].items():
+    failed_tickers: list[str] = []
+    for index, (ticker, meta) in enumerate(config["tickers"].items()):
+        if index:
+            time.sleep(0.15)
         try:
             facts = fetch_sec_companyfacts(meta["cik"])
             values = latest_period_values(
@@ -222,10 +278,32 @@ def sec_fundamentals(config: dict[str, Any]) -> tuple[dict[str, dict[str, float]
             }
         except (HTTPError, URLError, TimeoutError, OSError, json.JSONDecodeError) as exc:
             warnings.append(f"SEC companyfacts unavailable for {ticker}: {exc}")
+            failed_tickers.append(ticker)
+
+    fresh_count = len(output)
+    cached_used = False
+    for ticker in failed_tickers:
+        cached = (cached_fundamentals or {}).get(ticker)
+        if cached:
+            output[ticker] = cached
+            cached_used = True
+
+    if cached_used:
+        warnings.append("Retained cached SEC fundamentals for unavailable issuers.")
+
     if len(output) < 3:
-        warnings.append("Using sample fundamentals because fewer than three SEC issuers were fetched.")
+        message = "Fewer than three SEC issuers were fetched and no sufficient public cache exists."
+        warnings.append(f"{message} Using sample fundamentals.")
+        blocking_warnings.append(message)
         output = sample_fundamentals()
-    return output, warnings
+        source = "sample"
+    elif fresh_count == 0 and cached_used:
+        source = "SEC cache"
+    elif cached_used:
+        source = "SEC/cache"
+    else:
+        source = "SEC"
+    return output, warnings, blocking_warnings, source
 
 
 def sample_fundamentals() -> dict[str, dict[str, float]]:
@@ -316,12 +394,16 @@ def monthly_forward_fill(series_by_id: dict[str, list[dict[str, Any]]]) -> list[
     return output
 
 
-def build_dataset() -> dict[str, Any]:
+def build_dataset(
+    cached_payload: dict[str, Any] | None = None,
+) -> tuple[dict[str, Any], list[str]]:
     config = read_json(CONFIG)
     warnings: list[str] = []
+    blocking_warnings: list[str] = []
 
-    fred, fred_warnings = fred_data()
+    fred, fred_warnings, fred_blocking = fred_data(cached_payload)
     warnings.extend(fred_warnings)
+    blocking_warnings.extend(fred_blocking)
 
     series_by_id: dict[str, list[dict[str, Any]]] = {}
     series_by_id["bbb_oas"] = to_timeseries(fred["bbb_oas"], "bbb_oas")
@@ -381,8 +463,12 @@ def build_dataset() -> dict[str, Any]:
     series_by_id["orderbook_cover"] = cover_rows
     series_by_id["new_issue_concession"] = concession_rows
 
-    fundamentals, sec_warnings = sec_fundamentals(config)
+    fundamentals, sec_warnings, sec_blocking, fundamentals_source = sec_fundamentals(
+        config,
+        (cached_payload or {}).get("fundamentals"),
+    )
     warnings.extend(sec_warnings)
+    blocking_warnings.extend(sec_blocking)
     today = date.today().isoformat()
     capex_to_fcf_vals = []
     debt_to_capex_vals = []
@@ -397,10 +483,32 @@ def build_dataset() -> dict[str, Any]:
             nd_ebitda_vals.append(vals["net_debt"] / vals["ebitda"])
         if vals["interest"]:
             coverage_vals.append(vals["op_income"] / vals["interest"])
-    series_by_id["capex_to_fcf"] = [{"date": today, "metric_id": "capex_to_fcf", "value": statistics.median(capex_to_fcf_vals), "source": "SEC/sample", "quality": "public/proxy", "notes": "Median issuer ratio"}]
-    series_by_id["debt_to_capex"] = [{"date": today, "metric_id": "debt_to_capex", "value": statistics.median(debt_to_capex_vals), "source": "SEC/sample", "quality": "public/proxy", "notes": "Median issuer ratio"}]
-    series_by_id["net_debt_to_ebitda"] = [{"date": today, "metric_id": "net_debt_to_ebitda", "value": statistics.median(nd_ebitda_vals), "source": "SEC/sample", "quality": "public/proxy", "notes": "Median issuer ratio"}]
-    series_by_id["interest_coverage"] = [{"date": today, "metric_id": "interest_coverage", "value": statistics.median(coverage_vals), "source": "SEC/sample", "quality": "public/proxy", "notes": "Median issuer ratio"}]
+    fundamental_series = {
+        "capex_to_fcf": statistics.median(capex_to_fcf_vals),
+        "debt_to_capex": statistics.median(debt_to_capex_vals),
+        "net_debt_to_ebitda": statistics.median(nd_ebitda_vals),
+        "interest_coverage": statistics.median(coverage_vals),
+    }
+    for metric_id, value in fundamental_series.items():
+        previous = cached_series(cached_payload, metric_id, "SEC cache")
+        if fundamentals_source == "SEC cache" and previous:
+            series_by_id[metric_id] = [
+                {
+                    **row,
+                    "metric_id": metric_id,
+                    "notes": "Previous successful SEC snapshot retained",
+                }
+                for row in previous
+            ]
+        else:
+            series_by_id[metric_id] = [{
+                "date": today,
+                "metric_id": metric_id,
+                "value": value,
+                "source": fundamentals_source,
+                "quality": "public/proxy" if fundamentals_source != "sample" else "illustrative",
+                "notes": "Median issuer ratio",
+            }]
 
     obs = read_csv(MANUAL / "off_balance_sheet.csv")
     by_obs_date: dict[str, list[float]] = defaultdict(list)
@@ -469,7 +577,7 @@ def build_dataset() -> dict[str, Any]:
     }
 
     payload = {
-        "generated_at": datetime.utcnow().replace(microsecond=0).isoformat() + "Z",
+        "generated_at": datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
         "as_of": max((card.get("date", "") for card in latest_cards if not card.get("missing")), default=today),
         "stress_index": round(stress_index, 1),
         "stress_status": status_for_score(stress_index),
@@ -477,9 +585,10 @@ def build_dataset() -> dict[str, Any]:
         "metrics": latest_cards,
         "series": series_compact,
         "fundamentals": fundamentals,
+        "source_cache": {"fred": fred},
         "config": config,
     }
-    return payload
+    return payload, blocking_warnings
 
 
 def main() -> int:
@@ -490,12 +599,13 @@ def main() -> int:
         help="Do not replace cached output when FRED or SEC public sources are unavailable.",
     )
     args = parser.parse_args()
-    payload = build_dataset()
+    cached_payload = read_json(CACHE / "latest_metrics.json") if args.strict_public and (CACHE / "latest_metrics.json").exists() else None
+    payload, blocking_warnings = build_dataset(cached_payload)
     if payload["warnings"]:
         print("Warnings:")
         for warning in payload["warnings"]:
             print(f"- {warning}")
-        if args.strict_public:
+        if args.strict_public and blocking_warnings:
             print("Strict public mode: cached dashboard files were not changed.")
             return 1
     write_json(DASHBOARD_DATA / "metrics.json", payload)
