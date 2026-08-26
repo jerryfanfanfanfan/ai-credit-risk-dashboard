@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-08-23T12:14:21Z",
-  "as_of": "2026-08-20",
+  "generated_at": "2026-08-26T01:26:20Z",
+  "as_of": "2026-08-24",
   "stress_index": 50.5,
   "stress_status": "yellow",
   "warnings": [
@@ -119,10 +119,10 @@
       "category": "Market credit",
       "unit": "bp",
       "value": 100.0,
-      "date": "2026-08-20",
+      "date": "2026-08-24",
       "score": 0.0,
       "status": "green",
-      "percentile": 25.794155019059723,
+      "percentile": 26.11464968152866,
       "source": "FRED",
       "quality": "public",
       "frequency": "Daily",
@@ -143,11 +143,11 @@
       "name": "US High Yield OAS",
       "category": "Market credit",
       "unit": "bp",
-      "value": 275.0,
-      "date": "2026-08-20",
+      "value": 269.0,
+      "date": "2026-08-24",
       "score": 0.0,
       "status": "green",
-      "percentile": 16.772554002541295,
+      "percentile": 8.535031847133757,
       "source": "FRED",
       "quality": "public",
       "frequency": "Daily",
@@ -416,26 +416,6 @@
   ],
   "series": {
     "bbb_oas": [
-      {
-        "date": "2023-08-22",
-        "value": 154.0,
-        "score": 13.33
-      },
-      {
-        "date": "2023-08-23",
-        "value": 154.0,
-        "score": 13.33
-      },
-      {
-        "date": "2023-08-24",
-        "value": 152.0,
-        "score": 12.22
-      },
-      {
-        "date": "2023-08-25",
-        "value": 151.0,
-        "score": 11.67
-      },
       {
         "date": "2023-08-28",
         "value": 151.0,
@@ -4350,29 +4330,19 @@
         "date": "2026-08-20",
         "value": 100.0,
         "score": 0.0
+      },
+      {
+        "date": "2026-08-21",
+        "value": 100.0,
+        "score": 0.0
+      },
+      {
+        "date": "2026-08-24",
+        "value": 100.0,
+        "score": 0.0
       }
     ],
     "hy_oas": [
-      {
-        "date": "2023-08-22",
-        "value": 393.0,
-        "score": 10.75
-      },
-      {
-        "date": "2023-08-23",
-        "value": 392.0,
-        "score": 10.5
-      },
-      {
-        "date": "2023-08-24",
-        "value": 391.0,
-        "score": 10.25
-      },
-      {
-        "date": "2023-08-25",
-        "value": 390.0,
-        "score": 10.0
-      },
       {
         "date": "2023-08-28",
         "value": 386.0,
@@ -8287,6 +8257,16 @@
         "date": "2026-08-20",
         "value": 275.0,
         "score": 0.0
+      },
+      {
+        "date": "2026-08-21",
+        "value": 270.0,
+        "score": 0.0
+      },
+      {
+        "date": "2026-08-24",
+        "value": 269.0,
+        "score": 0.0
       }
     ],
     "oracle_5y_cds": [
@@ -9069,30 +9049,6 @@
   "source_cache": {
     "fred": {
       "ig_oas": [
-        {
-          "date": "2023-08-22",
-          "value": 125.0,
-          "source": "FRED",
-          "quality": "public"
-        },
-        {
-          "date": "2023-08-23",
-          "value": 125.0,
-          "source": "FRED",
-          "quality": "public"
-        },
-        {
-          "date": "2023-08-24",
-          "value": 123.0,
-          "source": "FRED",
-          "quality": "public"
-        },
-        {
-          "date": "2023-08-25",
-          "value": 123.0,
-          "source": "FRED",
-          "quality": "public"
-        },
         {
           "date": "2023-08-28",
           "value": 122.0,
@@ -13784,33 +13740,21 @@
           "value": 82.0,
           "source": "FRED",
           "quality": "public"
+        },
+        {
+          "date": "2026-08-21",
+          "value": 81.0,
+          "source": "FRED",
+          "quality": "public"
+        },
+        {
+          "date": "2026-08-24",
+          "value": 81.0,
+          "source": "FRED",
+          "quality": "public"
         }
       ],
       "bbb_oas": [
-        {
-          "date": "2023-08-22",
-          "value": 154.0,
-          "source": "FRED",
-          "quality": "public"
-        },
-        {
-          "date": "2023-08-23",
-          "value": 154.0,
-          "source": "FRED",
-          "quality": "public"
-        },
-        {
-          "date": "2023-08-24",
-          "value": 152.0,
-          "source": "FRED",
-          "quality": "public"
-        },
-        {
-          "date": "2023-08-25",
-          "value": 151.0,
-          "source": "FRED",
-          "quality": "public"
-        },
         {
           "date": "2023-08-28",
           "value": 151.0,
@@ -18508,33 +18452,21 @@
           "value": 100.0,
           "source": "FRED",
           "quality": "public"
+        },
+        {
+          "date": "2026-08-21",
+          "value": 100.0,
+          "source": "FRED",
+          "quality": "public"
+        },
+        {
+          "date": "2026-08-24",
+          "value": 100.0,
+          "source": "FRED",
+          "quality": "public"
         }
       ],
       "hy_oas": [
-        {
-          "date": "2023-08-22",
-          "value": 393.0,
-          "source": "FRED",
-          "quality": "public"
-        },
-        {
-          "date": "2023-08-23",
-          "value": 392.0,
-          "source": "FRED",
-          "quality": "public"
-        },
-        {
-          "date": "2023-08-24",
-          "value": 391.0,
-          "source": "FRED",
-          "quality": "public"
-        },
-        {
-          "date": "2023-08-25",
-          "value": 390.0,
-          "source": "FRED",
-          "quality": "public"
-        },
         {
           "date": "2023-08-28",
           "value": 386.0,
@@ -23230,6 +23162,18 @@
         {
           "date": "2026-08-20",
           "value": 275.0,
+          "source": "FRED",
+          "quality": "public"
+        },
+        {
+          "date": "2026-08-21",
+          "value": 270.0,
+          "source": "FRED",
+          "quality": "public"
+        },
+        {
+          "date": "2026-08-24",
+          "value": 269.0,
           "source": "FRED",
           "quality": "public"
         }
