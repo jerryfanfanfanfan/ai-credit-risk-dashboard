@@ -8,6 +8,7 @@ on:
       - ".github/workflows/weekly-update.yml"
       - "scripts/update_data.py"
       - "config/metrics.json"
+      - "config/refresh.json"
       - "tests/**"
   schedule:
     # Sunday 20:00 Asia/Shanghai (12:00 UTC).
